@@ -1,7 +1,7 @@
 import api from './api';
 
 // Service pour les types de congés
-const leaveTypeService = {
+export const leaveTypeService = {
   // Récupérer tous les types de congés
   getLeaveTypes: async () => {
     const response = await api.get('/leave-types');
@@ -32,5 +32,3 @@ const leaveTypeService = {
     return response.data;
   }
 };
-
-export default leaveTypeService;

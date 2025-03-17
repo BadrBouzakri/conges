@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Paper, Typography, Button, Chip, Grid, Box, 
   Divider, Card, CardContent, TextField, Alert, Dialog,
-  DialogTitle, DialogContent, DialogContentText, DialogActions
+  DialogTitle, DialogContent, DialogContentText, DialogActions, CircularProgress
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 
-import leaveRequestService from '../services/leaveRequestService';
+import { leaveRequestService } from '../services/leaveRequestService';
 import { useAuth } from '../contexts/AuthContext';
 
 const LeaveRequestDetail = () => {
@@ -27,11 +28,11 @@ const LeaveRequestDetail = () => {
   useEffect(() => {
     const fetchLeaveRequest = async () => {
       try {
-        const data = await leaveRequestService.getById(id);
+        const data = await leaveRequestService.getLeaveRequest(id);
         setLeaveRequest(data);
       } catch (error) {
         setError("Failed to load leave request details");
-        console.error(error);
+        console.error('Erreur lors du chargement de la demande:', error);
       } finally {
         setLoading(false);
       }
@@ -75,24 +76,28 @@ const LeaveRequestDetail = () => {
   const handleAction = async () => {
     try {
       if (actionType === 'approve') {
-        await leaveRequestService.approve(id, { comment });
+        await leaveRequestService.approveLeaveRequest(id);
       } else if (actionType === 'reject') {
-        await leaveRequestService.reject(id, { comment });
+        await leaveRequestService.rejectLeaveRequest(id);
       }
       
       // Refresh the leave request data
-      const updatedRequest = await leaveRequestService.getById(id);
+      const updatedRequest = await leaveRequestService.getLeaveRequest(id);
       setLeaveRequest(updatedRequest);
       setComment('');
       closeDialog();
     } catch (error) {
       setError(`Failed to ${actionType} leave request`);
-      console.error(error);
+      console.error('Erreur lors de l\'approbation:', error);
     }
   };
   
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
   }
   
   if (error) {
@@ -125,177 +130,93 @@ const LeaveRequestDetail = () => {
   const canEdit = leaveRequest.status === 'PENDING' && leaveRequest.user_id === user.id;
   
   return (
-    <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5">Leave Request Details</Typography>
-        <Box>
-          {canEdit && (
-            <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => navigate(`/leave-requests/${id}/edit`)}
-              sx={{ mr: 1 }}
-            >
-              Edit
-            </Button>
+    <Box>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate('/leave-requests')}
+        sx={{ mb: 2 }}
+      >
+        Retour
+      </Button>
+
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Détails de la demande de congés
+        </Typography>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" color="textSecondary">
+              Type de congé
+            </Typography>
+            <Typography variant="body1">{leaveRequest.leave_type.name}</Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" color="textSecondary">
+              Statut
+            </Typography>
+            <Chip
+              label={leaveRequest.status}
+              color={
+                leaveRequest.status === 'APPROVED'
+                  ? 'success'
+                  : leaveRequest.status === 'REJECTED'
+                  ? 'error'
+                  : 'warning'
+              }
+              sx={{ mt: 1 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" color="textSecondary">
+              Date de début
+            </Typography>
+            <Typography variant="body1">
+              {new Date(leaveRequest.start_date).toLocaleDateString()}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" color="textSecondary">
+              Date de fin
+            </Typography>
+            <Typography variant="body1">
+              {new Date(leaveRequest.end_date).toLocaleDateString()}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" color="textSecondary">
+              Commentaire
+            </Typography>
+            <Typography variant="body1">{leaveRequest.comment || 'Aucun commentaire'}</Typography>
+          </Grid>
+
+          {leaveRequest.status === 'PENDING' && canApprove && (
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={() => openDialog('reject')}
+                >
+                  Rejeter
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => openDialog('approve')}
+                >
+                  Approuver
+                </Button>
+              </Box>
+            </Grid>
           )}
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/leave-requests')}
-          >
-            Back
-          </Button>
-        </Box>
-      </Box>
-      
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle1" gutterBottom>Request Information</Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Status</Typography>
-                  <Box sx={{ mt: 1 }}>{getStatusChip(leaveRequest.status)}</Box>
-                </Grid>
-                
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Leave Type</Typography>
-                  <Typography variant="body1">{leaveRequest.leave_type.name}</Typography>
-                </Grid>
-                
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">Start Date</Typography>
-                  <Typography variant="body1">
-                    {new Date(leaveRequest.start_date).toLocaleDateString()}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">End Date</Typography>
-                  <Typography variant="body1">
-                    {new Date(leaveRequest.end_date).toLocaleDateString()}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">Duration</Typography>
-                  <Typography variant="body1">{leaveRequest.duration} working days</Typography>
-                </Grid>
-                
-                {leaveRequest.reason && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Reason</Typography>
-                    <Typography variant="body1">{leaveRequest.reason}</Typography>
-                  </Grid>
-                )}
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">Requested By</Typography>
-                  <Typography variant="body1">
-                    {leaveRequest.user.first_name} {leaveRequest.user.last_name}
-                  </Typography>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">Requested On</Typography>
-                  <Typography variant="body1">
-                    {new Date(leaveRequest.created_at).toLocaleString()}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
         </Grid>
-        
-        {leaveRequest.status !== 'PENDING' && (
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>Decision Information</Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Decision</Typography>
-                    <Typography variant="body1">
-                      {leaveRequest.status === 'APPROVED' ? 'Approved' : 'Rejected'}
-                    </Typography>
-                  </Grid>
-                  
-                  {leaveRequest.approver && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Decided By</Typography>
-                      <Typography variant="body1">
-                        {leaveRequest.approver.first_name} {leaveRequest.approver.last_name}
-                      </Typography>
-                    </Grid>
-                  )}
-                  
-                  {leaveRequest.updated_at && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Decided On</Typography>
-                      <Typography variant="body1">
-                        {new Date(leaveRequest.updated_at).toLocaleString()}
-                      </Typography>
-                    </Grid>
-                  )}
-                  
-                  {leaveRequest.comment && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary">Comment</Typography>
-                      <Typography variant="body1">{leaveRequest.comment}</Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-        
-        {leaveRequest.status === 'PENDING' && canApprove && (
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>Decision</Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <TextField
-                  label="Comment (optional)"
-                  multiline
-                  rows={4}
-                  value={comment}
-                  onChange={handleCommentChange}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                />
-                
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<CancelIcon />}
-                    onClick={() => openDialog('reject')}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={() => openDialog('approve')}
-                  >
-                    Approve
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-      </Grid>
-      
+      </Paper>
+
       <Dialog open={dialogOpen} onClose={closeDialog}>
         <DialogTitle>
           {actionType === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request'}
@@ -318,7 +239,7 @@ const LeaveRequestDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 };
 

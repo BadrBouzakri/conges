@@ -7,7 +7,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import { leaveRequestService } from '../services/leaveRequestService';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,6 +67,17 @@ const LeaveRequestList = ({ isApprovalPage = false }) => {
     setPage(0);
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette demande ?')) {
+      try {
+        await leaveRequestService.deleteLeaveRequest(id);
+        setLeaveRequests(leaveRequests.filter(request => request.id !== id));
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
+    }
+  };
+
   return (
     <Paper sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -124,14 +135,24 @@ const LeaveRequestList = ({ isApprovalPage = false }) => {
                           </IconButton>
                         </Tooltip>
                         {request.status === 'PENDING' && request.user_id === user.id && (
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/leave-requests/${request.id}/edit`)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <>
+                            <Tooltip title="Edit">
+                              <IconButton
+                                size="small"
+                                onClick={() => navigate(`/leave-requests/${request.id}/edit`)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDelete(request.id)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
                         )}
                       </TableCell>
                     </TableRow>

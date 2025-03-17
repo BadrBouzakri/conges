@@ -1,7 +1,7 @@
 import api from './api';
 
 // Service pour les demandes de congés
-const leaveRequestService = {
+export const leaveRequestService = {
   // Récupérer toutes les demandes de congés
   getLeaveRequests: async () => {
     const response = await api.get('/leave-requests');
@@ -38,18 +38,21 @@ const leaveRequestService = {
     return response.data;
   },
   
-  // Approuver ou rejeter une demande de congé
-  processLeaveRequest: async (id, status, comment) => {
-    const response = await api.post(`/leave-requests/${id}/approve`, {
-      status,
-      response_comment: comment
-    });
-    return response.data;
-  },
-  
   // Supprimer une demande de congé
   deleteLeaveRequest: async (id) => {
     const response = await api.delete(`/leave-requests/${id}`);
+    return response.data;
+  },
+  
+  // Approuver une demande de congé
+  approveLeaveRequest: async (id) => {
+    const response = await api.put(`/leave-requests/${id}/approve`);
+    return response.data;
+  },
+
+  // Rejeter une demande de congé
+  rejectLeaveRequest: async (id) => {
+    const response = await api.put(`/leave-requests/${id}/reject`);
     return response.data;
   },
   
@@ -59,5 +62,3 @@ const leaveRequestService = {
     return response.data;
   }
 };
-
-export default leaveRequestService;

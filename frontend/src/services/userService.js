@@ -1,7 +1,7 @@
 import api from './api';
 
 // Service pour les utilisateurs
-const userService = {
+export const userService = {
   // Récupérer tous les utilisateurs
   getUsers: async () => {
     const response = await api.get('/users');
@@ -48,7 +48,17 @@ const userService = {
   getApprovers: async () => {
     const response = await api.get('/users/approvers');
     return response.data;
+  },
+
+  // Mettre à jour le profil de l'utilisateur connecté
+  updateProfile: async (profileData) => {
+    const response = await api.put('/users/profile', profileData);
+    return response.data;
+  },
+
+  // Changer le mot de passe
+  changePassword: async (passwordData) => {
+    const response = await api.put('/users/change-password', passwordData);
+    return response.data;
   }
 };
-
-export default userService;
